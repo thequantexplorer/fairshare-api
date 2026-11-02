@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Fairshare</title>
+<style>
+  :root { --ink:#0b0b0c; --muted:#6b6f76; --line:#e7e8ea; --bg:#fafafa; --accent:#2078ff; }
+  * { box-sizing: border-box; }
+  body { margin:0; font:15px/1.5 -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif; color:var(--ink); background:var(--bg); }
+  header { display:flex; align-items:center; justify-content:space-between; padding:20px 40px; border-bottom:1px solid var(--line); background:#fff; }
+  .brand { font-weight:650; letter-spacing:-0.01em; display:flex; gap:10px; align-items:center; }
+  .dot { width:22px; height:22px; border-radius:7px; background:var(--ink); display:inline-block; }
+  main { max-width:960px; margin:40px auto; padding:0 24px; }
+  h1 { font-size:28px; letter-spacing:-0.02em; margin:0 0 4px; }
+  p.sub { color:var(--muted); margin:0 0 28px; }
+  table { width:100%; border-collapse:collapse; background:#fff; border:1px solid var(--line); border-radius:14px; overflow:hidden; }
+  th, td { text-align:left; padding:14px 18px; border-bottom:1px solid var(--line); }
+  th { font-size:12px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); font-weight:600; }
+  tr:last-child td { border-bottom:0; }
+  td.num { font-variant-numeric: tabular-nums; }
+  .shares { color:var(--muted); font-size:13px; }
+  .who { color:var(--muted); font-size:14px; }
+</style>
+</head>
+<body>
+<header><div class="brand"><span class="dot"></span>Fairshare</div><div class="who" id="who">Signing in…</div></header>
+<main>
+  <h1>Receipts</h1>
+  <p class="sub">Shared expenses and each person's share.</p>
+  <table>
+    <thead><tr><th>Date</th><th>Merchant</th><th>Total</th><th>Shares</th><th></th></tr></thead>
+    <tbody id="rows"></tbody>
+  </table>
+</main>
+<script type="module">
+  const fmt = (c) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(c / 100);
+  const session = await (await fetch('/api/session', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: 'maya@fairshare.dev' }) })).json();
+  document.getElementById('who').textContent = session.user.name;
+  window.fairshareToken = session.token;
+  const list = await (await fetch('/api/receipts', { headers: { Authorization: `Bearer ${session.token}` } })).json();
+  document.getElementById('rows').innerHTML = list.map((r) => `
+    <tr data-id="${r.id}">
+      <td>${r.date}</td><td>${r.merchant}</td><td class="num">${r.total}</td>
+      <td class="shares">${Object.entries(r.shares).map(([n, c]) => `${n} ${fmt(c)}`).join(' · ')}</td>
+      <td class="actions"></td>
+    </tr>`).join('');
+</script>
+</body>
+</html>
