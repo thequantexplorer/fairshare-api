@@ -21,6 +21,8 @@
   td.num { font-variant-numeric: tabular-nums; }
   .shares { color:var(--muted); font-size:13px; }
   .who { color:var(--muted); font-size:14px; }
+  button.export { font:inherit; font-size:13px; padding:6px 12px; border-radius:8px; border:1px solid var(--line); background:#fff; cursor:pointer; }
+  button.export:hover { border-color:var(--ink); }
 </style>
 </head>
 <body>
@@ -43,8 +45,15 @@
     <tr data-id="${r.id}">
       <td>${r.date}</td><td>${r.merchant}</td><td class="num">${r.total}</td>
       <td class="shares">${Object.entries(r.shares).map(([n, c]) => `${n} ${fmt(c)}`).join(' · ')}</td>
-      <td class="actions"></td>
+      <td class="actions"><button class="export" data-id="${r.id}">Export CSV</button></td>
     </tr>`).join('');
+  document.querySelectorAll('button.export').forEach((btn) => btn.addEventListener('click', async () => {
+    const auth = { Authorization: `Bearer ${session.token}` };
+    const created = await (await fetch(`/api/exports/receipts/${btn.dataset.id}`, { method: 'POST', headers: auth })).json();
+    const blob = await (await fetch(created.url, { headers: auth })).blob();
+    const link = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: created.file });
+    link.click();
+  }));
 </script>
 </body>
 </html>
