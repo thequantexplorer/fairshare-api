@@ -1,16 +1,18 @@
 import { Router } from 'express';
-import path from 'node:path';
-import { EXPORT_DIR, writeExport } from '../export.js';
+import { pipeline } from 'node:stream/promises';
+import { csvStream } from '../export.js';
 import { findReceipt } from '../store.js';
 
 export const exportsRouter = Router();
 
-exportsRouter.post('/receipts/:id', (req, res) => {
+exportsRouter.get('/receipts/:id', async (req, res, next) => {
   const receipt = findReceipt(req.params.id);
-  const file = writeExport(receipt);
-  res.status(201).json({ file, url: `/api/exports/${file}` });
-});
-
-exportsRouter.get('/:file', (req, res) => {
-  res.download(path.join(EXPORT_DIR, req.params.file));
+  if (!receipt || receipt.ownerId !== req.user!.sub) return res.status(404).json({ error: 'not found' });
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.attachment(`${receipt.id}.csv`);
+  try {
+    await pipeline(csvStream(receipt), res);
+  } catch (err) {
+    next(err);
+  }
 });

@@ -49,10 +49,12 @@
     </tr>`).join('');
   document.querySelectorAll('button.export').forEach((btn) => btn.addEventListener('click', async () => {
     const auth = { Authorization: `Bearer ${session.token}` };
-    const created = await (await fetch(`/api/exports/receipts/${btn.dataset.id}`, { method: 'POST', headers: auth })).json();
-    const blob = await (await fetch(created.url, { headers: auth })).blob();
-    const link = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: created.file });
+    const res = await fetch(`/api/exports/receipts/${btn.dataset.id}`, { headers: auth });
+    if (!res.ok) return;
+    const url = URL.createObjectURL(await res.blob());
+    const link = Object.assign(document.createElement('a'), { href: url, download: `${btn.dataset.id}.csv` });
     link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 0);
   }));
 </script>
 </body>

@@ -1,27 +1,39 @@
-import fs from 'node:fs';
-import path from 'node:path';
-import { receiptTotal } from './split.js';
+import { Readable } from 'node:stream';
+import { receiptTotal, splitEvenly } from './split.js';
 import type { Receipt } from './types.js';
 
-export const EXPORT_DIR = path.resolve(process.env.EXPORT_DIR ?? 'exports');
+const FORMULA_PREFIX = /^[=+\-@\t\r]/;
 
-export function toCsv(receipt: Receipt): string {
-  const total = receiptTotal(receipt);
-  const perPerson = Math.round(total / receipt.participants.length);
-  const rows: string[][] = [['Section', 'Name', 'Amount']];
-  for (const item of receipt.items) {
-    rows.push(['Item', item.description, (item.amountCents / 100).toFixed(2)]);
-  }
-  for (const name of receipt.participants) {
-    rows.push(['Share', name, (perPerson / 100).toFixed(2)]);
-  }
-  rows.push(['Total', receipt.merchant, (total / 100).toFixed(2)]);
-  return rows.map((row) => row.join(',')).join('\n');
+function money(cents: number): string {
+  return (cents / 100).toFixed(2);
 }
 
-export function writeExport(receipt: Receipt): string {
-  fs.mkdirSync(EXPORT_DIR, { recursive: true });
-  const file = `${receipt.id}-${Date.now()}.csv`;
-  fs.writeFileSync(path.join(EXPORT_DIR, file), toCsv(receipt));
-  return file;
+/** Neutralizes spreadsheet formulas in free-text fields (OWASP CSV injection guidance). */
+function text(value: string): string {
+  return FORMULA_PREFIX.test(value) ? `'${value}` : value;
+}
+
+export function csvField(value: string): string {
+  return /[",\r\n]/.test(value) ? `"${value.replaceAll('"', '""')}"` : value;
+}
+
+export function* csvRows(receipt: Receipt): Generator<string> {
+  const total = receiptTotal(receipt);
+  const row = (...fields: string[]) => `${fields.map(csvField).join(',')}\n`;
+  yield row('Section', 'Name', 'Amount');
+  for (const item of receipt.items) {
+    yield row('Item', text(item.description), money(item.amountCents));
+  }
+  for (const [name, cents] of Object.entries(splitEvenly(total, receipt.participants))) {
+    yield row('Share', text(name), money(cents));
+  }
+  yield row('Total', text(receipt.merchant), money(total));
+}
+
+export function toCsv(receipt: Receipt): string {
+  return [...csvRows(receipt)].join('');
+}
+
+export function csvStream(receipt: Receipt): Readable {
+  return Readable.from(csvRows(receipt));
 }
