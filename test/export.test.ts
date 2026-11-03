@@ -49,6 +49,12 @@ describe('toCsv', () => {
     expect(shareCents(toCsv(findReceipt('r_1002')!))).toEqual({ Maya: 14751, Omar: 14750, Lena: 14750 });
   });
 
+  it('emits one share per participant when names repeat', () => {
+    const csv = toCsv(receipt({ items: [{ description: 'Snacks', amountCents: 501 }], participants: ['Sam', 'Sam'] }));
+    const shares = csv.trimEnd().split('\n').filter((line) => line.startsWith('Share,'));
+    expect(shares).toEqual(['Share,Sam,2.51', 'Share,Sam,2.50']);
+  });
+
   it('quotes fields containing commas, quotes and newlines', () => {
     const csv = toCsv(
       receipt({

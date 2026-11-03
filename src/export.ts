@@ -1,5 +1,5 @@
 import { Readable } from 'node:stream';
-import { receiptTotal, splitEvenly } from './split.js';
+import { receiptTotal, splitAmounts } from './split.js';
 import type { Receipt } from './types.js';
 
 const FORMULA_PREFIX = /^[=+\-@\t\r]/;
@@ -24,8 +24,9 @@ export function* csvRows(receipt: Receipt): Generator<string> {
   for (const item of receipt.items) {
     yield row('Item', text(item.description), money(item.amountCents));
   }
-  for (const [name, cents] of Object.entries(splitEvenly(total, receipt.participants))) {
-    yield row('Share', text(name), money(cents));
+  const shares = splitAmounts(total, receipt.participants.length);
+  for (const [i, name] of receipt.participants.entries()) {
+    yield row('Share', text(name), money(shares[i]!));
   }
   yield row('Total', text(receipt.merchant), money(total));
 }
