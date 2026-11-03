@@ -5,18 +5,26 @@ export function receiptTotal(receipt: Receipt): number {
 }
 
 /**
+ * Splits a total into `count` whole-cent amounts. Remainder cents go to the
+ * first positions so the amounts always add back up to the total.
+ */
+export function splitAmounts(totalCents: number, count: number): number[] {
+  if (count <= 0) return [];
+  const base = Math.floor(totalCents / count);
+  const remainder = totalCents - base * count;
+  return Array.from({ length: count }, (_, i) => base + (i < remainder ? 1 : 0));
+}
+
+/**
  * Splits a total across participants in whole cents. Remainder cents go to the
  * first participants so the shares always add back up to the total.
  */
 export function splitEvenly(totalCents: number, participants: string[]): Record<string, number> {
-  if (participants.length === 0) return {};
-  const base = Math.floor(totalCents / participants.length);
-  let remainder = totalCents - base * participants.length;
+  const amounts = splitAmounts(totalCents, participants.length);
   const shares: Record<string, number> = {};
-  for (const name of participants) {
-    shares[name] = base + (remainder > 0 ? 1 : 0);
-    if (remainder > 0) remainder -= 1;
-  }
+  participants.forEach((name, i) => {
+    shares[name] = amounts[i]!;
+  });
   return shares;
 }
 

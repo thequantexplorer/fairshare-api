@@ -3,6 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { issueToken, requireAdmin, requireUser } from './auth.js';
 import { adminRouter } from './routes/admin.js';
+import { exportsRouter } from './routes/exports.js';
 import { receiptsRouter } from './routes/receipts.js';
 import { users } from './store.js';
 
@@ -23,6 +24,7 @@ export function createApp() {
   });
 
   app.use('/api/receipts', requireUser, receiptsRouter);
+  app.use('/api/exports', requireUser, exportsRouter);
   app.use('/api/admin', requireUser, requireAdmin, adminRouter);
   return app;
 }

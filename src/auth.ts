@@ -16,19 +16,17 @@ declare module 'express-serve-static-core' {
 }
 
 export function issueToken(user: User): string {
-  return jwt.sign({ sub: user.id, role: user.role }, JWT_SECRET, { expiresIn: '12h' });
+  return jwt.sign({ sub: user.id, role: user.role }, JWT_SECRET, { algorithm: 'HS256', expiresIn: '12h' });
 }
 
 function readToken(header: string | undefined): TokenClaims | null {
   if (!header?.startsWith('Bearer ')) return null;
   const token = header.slice('Bearer '.length);
   try {
-    return jwt.verify(token, JWT_SECRET) as TokenClaims;
+    const claims = jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] });
+    if (typeof claims === 'string' || typeof claims.sub !== 'string') return null;
+    return { sub: claims.sub, role: claims.role === 'admin' ? 'admin' : 'member' };
   } catch {
-    // Local tokens minted by older CLI builds are unsigned; keep them working outside production.
-    if (process.env.NODE_ENV !== 'production') {
-      return jwt.decode(token) as TokenClaims | null;
-    }
     return null;
   }
 }

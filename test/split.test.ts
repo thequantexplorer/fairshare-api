@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatCents, splitEvenly } from '../src/split.js';
+import { formatCents, splitAmounts, splitEvenly } from '../src/split.js';
 
 describe('splitEvenly', () => {
   it('splits evenly when the total divides cleanly', () => {
@@ -12,6 +12,17 @@ describe('splitEvenly', () => {
 
   it('returns no shares for an empty receipt', () => {
     expect(splitEvenly(500, [])).toEqual({});
+  });
+});
+
+describe('splitAmounts', () => {
+  it('returns one amount per position that sums to the total', () => {
+    expect(splitAmounts(501, 2)).toEqual([251, 250]);
+    expect(splitAmounts(1000, 3)).toEqual([334, 333, 333]);
+  });
+
+  it('returns no amounts for zero positions', () => {
+    expect(splitAmounts(500, 0)).toEqual([]);
   });
 });
 
